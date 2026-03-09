@@ -1,6 +1,6 @@
 package fr.isen.nicotom.netflix
 
-import android.content.Intent
+/*import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -265,7 +265,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             }
         }
     }
-}
+}*/
 
 // Traduit les erreurs Firebase en français
 fun firebaseError(msg: String?): String = when {
