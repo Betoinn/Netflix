@@ -2,161 +2,278 @@ package fr.isen.nicotom.netflix
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.textfield.TextInputLayout
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import fr.isen.nicotom.netflix.ui.theme.NetflixTheme
 
-class LoginActivity : AppCompatActivity() {
-
-    private lateinit var auth: FirebaseAuth
-    private val database = FirebaseDatabase.getInstance().reference
-
-    private lateinit var btnTabLogin: Button
-    private lateinit var btnTabRegister: Button
-    private lateinit var tilName: TextInputLayout
-    private lateinit var etName: com.google.android.material.textfield.TextInputEditText
-    private lateinit var etEmail: com.google.android.material.textfield.TextInputEditText
-    private lateinit var etPassword: com.google.android.material.textfield.TextInputEditText
-    private lateinit var btnSubmit: Button
-    private lateinit var tvError: TextView
-    private lateinit var progressBar: ProgressBar
-
-    private var isLoginMode = true
-
+class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
+        enableEdgeToEdge()
 
-        auth = FirebaseAuth.getInstance()
-
+        // Si déjà connecté → aller directement à MainActivity
+        val auth = FirebaseAuth.getInstance()
         if (auth.currentUser != null) {
-            goToMain()
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
             return
         }
 
-        btnTabLogin   = findViewById(R.id.btnTabLogin)
-        btnTabRegister = findViewById(R.id.btnTabRegister)
-        tilName       = findViewById(R.id.tilName)
-        etName        = findViewById(R.id.etName)
-        etEmail       = findViewById(R.id.etEmail)
-        etPassword    = findViewById(R.id.etPassword)
-        btnSubmit     = findViewById(R.id.btnSubmit)
-        tvError       = findViewById(R.id.tvError)
-        progressBar   = findViewById(R.id.progressBar)
-
-        btnTabLogin.setOnClickListener {
-            isLoginMode = true
-            tilName.visibility = View.GONE
-            btnSubmit.text = "Se connecter"
-            btnTabLogin.backgroundTintList = getColorStateList(R.color.gold)
-            btnTabRegister.backgroundTintList = getColorStateList(R.color.surface)
-            clearError()
-        }
-
-        btnTabRegister.setOnClickListener {
-            isLoginMode = false
-            tilName.visibility = View.VISIBLE
-            btnSubmit.text = "Créer un compte"
-            btnTabRegister.backgroundTintList = getColorStateList(R.color.gold)
-            btnTabLogin.backgroundTintList = getColorStateList(R.color.surface)
-            clearError()
-        }
-
-        btnSubmit.setOnClickListener {
-            val email    = etEmail.text.toString().trim()
-            val password = etPassword.text.toString().trim()
-
-            if (email.isEmpty() || password.isEmpty()) {
-                showError("Veuillez remplir tous les champs")
-                return@setOnClickListener
-            }
-            if (password.length < 6) {
-                showError("Le mot de passe doit avoir au moins 6 caractères")
-                return@setOnClickListener
-            }
-
-            if (isLoginMode) {
-                login(email, password)
-            } else {
-                val name = etName.text.toString().trim()
-                if (name.isEmpty()) {
-                    showError("Veuillez entrer un nom d'affichage")
-                    return@setOnClickListener
-                }
-                register(email, password, name)
-            }
-        }
-    }
-
-    private fun login(email: String, password: String) {
-        showLoading(true)
-
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                goToMain()
-            }
-            .addOnFailureListener { e ->
-                showLoading(false)
-                showError(getFirebaseErrorMessage(e.message))
-            }
-    }
-
-    private fun register(email: String, password: String, name: String) {
-        showLoading(true)
-
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnSuccessListener { result ->
-                val userId = result.user!!.uid
-
-                val userProfile = mapOf(
-                    "name"  to name,
-                    "email" to email
-                )
-                database.child("users").child(userId).setValue(userProfile)
-                    .addOnSuccessListener { goToMain() }
-                    .addOnFailureListener { e ->
-                        showLoading(false)
-                        showError("Compte créé mais erreur profil : ${e.message}")
+        setContent {
+            NetflixTheme {
+                LoginScreen(
+                    onLoginSuccess = {
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
                     }
+                )
             }
-            .addOnFailureListener { e ->
-                showLoading(false)
-                showError(getFirebaseErrorMessage(e.message))
-            }
-    }
-
-    private fun goToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
-        finish()
-    }
-
-    private fun showLoading(loading: Boolean) {
-        progressBar.visibility = if (loading) View.VISIBLE else View.GONE
-        btnSubmit.isEnabled = !loading
-    }
-
-    private fun showError(message: String) {
-        tvError.text = message
-        tvError.visibility = View.VISIBLE
-    }
-
-    private fun clearError() {
-        tvError.visibility = View.GONE
-    }
-
-
-    private fun getFirebaseErrorMessage(msg: String?): String {
-        return when {
-            msg == null                          -> "Erreur inconnue"
-            "no user record"     in msg          -> "Aucun compte avec cet email"
-            "password is invalid" in msg         -> "Mot de passe incorrect"
-            "email address is already" in msg    -> "Cet email est déjà utilisé"
-            "badly formatted"    in msg          -> "Format d'email invalide"
-            "network error"      in msg          -> "Pas de connexion internet"
-            else                                 -> "Erreur : $msg"
         }
     }
+}
+
+@Composable
+fun LoginScreen(onLoginSuccess: () -> Unit) {
+    val auth     = FirebaseAuth.getInstance()
+    val database = FirebaseDatabase.getInstance().reference
+
+    // --- États du formulaire ---
+    var isLoginMode  by remember { mutableStateOf(true) }
+    var name         by remember { mutableStateOf("") }
+    var email        by remember { mutableStateOf("") }
+    var password     by remember { mutableStateOf("") }
+    var errorMsg     by remember { mutableStateOf("") }
+    var isLoading    by remember { mutableStateOf(false) }
+    var showPassword by remember { mutableStateOf(false) }
+
+    // Couleurs
+    val black   = Color(0xFF141414)
+    val red     = Color(0xFFE50914)
+    val white   = Color.White
+    val grey    = Color(0xFF8A8A9A)
+    val surface = Color(0xFF2A2A2A)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            // --- Titre ---
+            Text(
+                text = "NETFLIX+",
+                color = red,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Text(
+                text = "Votre collection de films",
+                color = grey,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(bottom = 36.dp)
+            )
+
+            // --- Onglets Connexion / Inscription ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                Button(
+                    onClick = { isLoginMode = true; errorMsg = "" },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isLoginMode) red else surface
+                    )
+                ) {
+                    Text("Connexion", color = white, fontSize = 13.sp)
+                }
+                Button(
+                    onClick = { isLoginMode = false; errorMsg = "" },
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (!isLoginMode) red else surface
+                    )
+                ) {
+                    Text("Inscription", color = white, fontSize = 13.sp)
+                }
+            }
+
+            // --- Champ Nom (inscription seulement) ---
+            if (!isLoginMode) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom d'affichage", color = grey) },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = white,
+                        unfocusedTextColor = white,
+                        focusedBorderColor = red,
+                        unfocusedBorderColor = grey
+                    ),
+                    singleLine = true
+                )
+            }
+
+            // --- Champ Email ---
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Adresse e-mail", color = grey) },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = white,
+                    unfocusedTextColor = white,
+                    focusedBorderColor = red,
+                    unfocusedBorderColor = grey
+                ),
+                singleLine = true
+            )
+
+            // --- Champ Mot de passe ---
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Mot de passe", color = grey) },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                visualTransformation = if (showPassword) VisualTransformation.None
+                else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    TextButton(onClick = { showPassword = !showPassword }) {
+                        Text(
+                            text = if (showPassword) "Cacher" else "Voir",
+                            color = grey,
+                            fontSize = 12.sp
+                        )
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = white,
+                    unfocusedTextColor = white,
+                    focusedBorderColor = red,
+                    unfocusedBorderColor = grey
+                ),
+                singleLine = true
+            )
+
+            // --- Message d'erreur ---
+            if (errorMsg.isNotEmpty()) {
+                Text(
+                    text = errorMsg,
+                    color = Color(0xFFFF6B6B),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // --- Bouton principal ou chargement ---
+            if (isLoading) {
+                CircularProgressIndicator(color = red)
+            } else {
+                Button(
+                    onClick = {
+                        // Validation
+                        if (email.isBlank() || password.isBlank()) {
+                            errorMsg = "Veuillez remplir tous les champs"
+                            return@Button
+                        }
+                        if (password.length < 6) {
+                            errorMsg = "Le mot de passe doit avoir au moins 6 caractères"
+                            return@Button
+                        }
+                        if (!isLoginMode && name.isBlank()) {
+                            errorMsg = "Veuillez entrer un nom d'affichage"
+                            return@Button
+                        }
+
+                        isLoading = true
+                        errorMsg  = ""
+
+                        if (isLoginMode) {
+                            // CONNEXION
+                            auth.signInWithEmailAndPassword(email, password)
+                                .addOnSuccessListener { onLoginSuccess() }
+                                .addOnFailureListener { e ->
+                                    isLoading = false
+                                    errorMsg  = firebaseError(e.message)
+                                }
+                        } else {
+                            // INSCRIPTION
+                            auth.createUserWithEmailAndPassword(email, password)
+                                .addOnSuccessListener { result ->
+                                    val uid = result.user!!.uid
+                                    database.child("users").child(uid).setValue(
+                                        mapOf("name" to name, "email" to email)
+                                    )
+                                        .addOnSuccessListener { onLoginSuccess() }
+                                        .addOnFailureListener { e ->
+                                            isLoading = false
+                                            errorMsg  = "Compte créé mais erreur : ${e.message}"
+                                        }
+                                }
+                                .addOnFailureListener { e ->
+                                    isLoading = false
+                                    errorMsg  = firebaseError(e.message)
+                                }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = red)
+                ) {
+                    Text(
+                        text = if (isLoginMode) "Se connecter" else "Créer un compte",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = white
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Traduit les erreurs Firebase en français
+fun firebaseError(msg: String?): String = when {
+    msg == null                        -> "Erreur inconnue"
+    "no user record"     in msg        -> "Aucun compte avec cet email"
+    "password is invalid" in msg       -> "Mot de passe incorrect"
+    "email address is already" in msg  -> "Cet email est déjà utilisé"
+    "badly formatted"    in msg        -> "Format d'email invalide"
+    "network error"      in msg        -> "Pas de connexion internet"
+    else                               -> "Erreur : $msg"
 }
