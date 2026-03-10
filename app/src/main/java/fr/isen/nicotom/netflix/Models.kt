@@ -1,4 +1,3 @@
-
 package fr.isen.nicotom.netflix
 
 import com.google.gson.annotations.SerializedName
