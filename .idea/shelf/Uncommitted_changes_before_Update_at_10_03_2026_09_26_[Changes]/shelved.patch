@@ -1,0 +1,1842 @@
+Index: app/src/main/java/fr/isen/nicotom/netflix/LoginActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package fr.isen.nicotom.netflix\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/fr/isen/nicotom/netflix/LoginActivity.kt b/app/src/main/java/fr/isen/nicotom/netflix/LoginActivity.kt
+--- a/app/src/main/java/fr/isen/nicotom/netflix/LoginActivity.kt	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/app/src/main/java/fr/isen/nicotom/netflix/LoginActivity.kt	(date 1773128997112)
+@@ -1,2 +1,279 @@
+ package fr.isen.nicotom.netflix
+ 
++import android.content.Intent
++import android.os.Bundle
++import androidx.activity.ComponentActivity
++import androidx.activity.compose.setContent
++import androidx.activity.enableEdgeToEdge
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.foundation.text.KeyboardOptions
++import androidx.compose.material3.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.text.input.KeyboardType
++import androidx.compose.ui.text.input.PasswordVisualTransformation
++import androidx.compose.ui.text.input.VisualTransformation
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import com.google.firebase.auth.FirebaseAuth
++import com.google.firebase.database.FirebaseDatabase
++import fr.isen.nicotom.netflix.ui.theme.NetflixTheme
++
++class LoginActivity : ComponentActivity() {
++    override fun onCreate(savedInstanceState: Bundle?) {
++        super.onCreate(savedInstanceState)
++        enableEdgeToEdge()
++
++        // Si déjà connecté → aller directement à MainActivity
++        val auth = FirebaseAuth.getInstance()
++        if (auth.currentUser != null) {
++            startActivity(Intent(this, MainActivity::class.java))
++            finish()
++            return
++        }
++
++        setContent {
++            NetflixTheme {
++                LoginScreen(
++                    onLoginSuccess = {
++                        startActivity(Intent(this, MainActivity::class.java))
++                        finish()
++                    }
++                )
++            }
++        }
++    }
++}
++
++@Composable
++fun LoginScreen(onLoginSuccess: () -> Unit) {
++    val auth     = FirebaseAuth.getInstance()
++    val database = FirebaseDatabase.getInstance().reference
++
++    // --- États du formulaire ---
++    var isLoginMode  by remember { mutableStateOf(true) }
++    var name         by remember { mutableStateOf("") }
++    var email        by remember { mutableStateOf("") }
++    var password     by remember { mutableStateOf("") }
++    var errorMsg     by remember { mutableStateOf("") }
++    var isLoading    by remember { mutableStateOf(false) }
++    var showPassword by remember { mutableStateOf(false) }
++
++    // Couleurs
++    val black   = Color(0xFF141414)
++    val red     = Color(0xFFE50914)
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val surface = Color(0xFF2A2A2A)
++
++    Box(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(black),
++        contentAlignment = Alignment.Center
++    ) {
++        Column(
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(horizontal = 32.dp),
++            horizontalAlignment = Alignment.CenterHorizontally
++        ) {
++
++            // --- Titre ---
++            Text(
++                text = "NETFLIX+",
++                color = red,
++                fontSize = 36.sp,
++                fontWeight = FontWeight.ExtraBold,
++                modifier = Modifier.padding(bottom = 8.dp)
++            )
++            Text(
++                text = "Votre collection de films",
++                color = grey,
++                fontSize = 14.sp,
++                modifier = Modifier.padding(bottom = 36.dp)
++            )
++
++            // --- Onglets Connexion / Inscription ---
++            Row(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .padding(bottom = 24.dp)
++            ) {
++                Button(
++                    onClick = { isLoginMode = true; errorMsg = "" },
++                    modifier = Modifier.weight(1f).height(40.dp),
++                    shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp),
++                    colors = ButtonDefaults.buttonColors(
++                        containerColor = if (isLoginMode) red else surface
++                    )
++                ) {
++                    Text("Connexion", color = white, fontSize = 13.sp)
++                }
++                Button(
++                    onClick = { isLoginMode = false; errorMsg = "" },
++                    modifier = Modifier.weight(1f).height(40.dp),
++                    shape = RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp),
++                    colors = ButtonDefaults.buttonColors(
++                        containerColor = if (!isLoginMode) red else surface
++                    )
++                ) {
++                    Text("Inscription", color = white, fontSize = 13.sp)
++                }
++            }
++
++            // --- Champ Nom (inscription seulement) ---
++            if (!isLoginMode) {
++                OutlinedTextField(
++                    value = name,
++                    onValueChange = { name = it },
++                    label = { Text("Nom d'affichage", color = grey) },
++                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
++                    colors = OutlinedTextFieldDefaults.colors(
++                        focusedTextColor = white,
++                        unfocusedTextColor = white,
++                        focusedBorderColor = red,
++                        unfocusedBorderColor = grey
++                    ),
++                    singleLine = true
++                )
++            }
++
++            // --- Champ Email ---
++            OutlinedTextField(
++                value = email,
++                onValueChange = { email = it },
++                label = { Text("Adresse e-mail", color = grey) },
++                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
++                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
++                colors = OutlinedTextFieldDefaults.colors(
++                    focusedTextColor = white,
++                    unfocusedTextColor = white,
++                    focusedBorderColor = red,
++                    unfocusedBorderColor = grey
++                ),
++                singleLine = true
++            )
++
++            // --- Champ Mot de passe ---
++            OutlinedTextField(
++                value = password,
++                onValueChange = { password = it },
++                label = { Text("Mot de passe", color = grey) },
++                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
++                visualTransformation = if (showPassword) VisualTransformation.None
++                else PasswordVisualTransformation(),
++                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
++                trailingIcon = {
++                    TextButton(onClick = { showPassword = !showPassword }) {
++                        Text(
++                            text = if (showPassword) "Cacher" else "Voir",
++                            color = grey,
++                            fontSize = 12.sp
++                        )
++                    }
++                },
++                colors = OutlinedTextFieldDefaults.colors(
++                    focusedTextColor = white,
++                    unfocusedTextColor = white,
++                    focusedBorderColor = red,
++                    unfocusedBorderColor = grey
++                ),
++                singleLine = true
++            )
++
++            // --- Message d'erreur ---
++            if (errorMsg.isNotEmpty()) {
++                Text(
++                    text = errorMsg,
++                    color = Color(0xFFFF6B6B),
++                    fontSize = 13.sp,
++                    modifier = Modifier.padding(bottom = 8.dp)
++                )
++            }
++
++            Spacer(modifier = Modifier.height(8.dp))
++
++            // --- Bouton principal ou chargement ---
++            if (isLoading) {
++                CircularProgressIndicator(color = red)
++            } else {
++                Button(
++                    onClick = {
++                        // Validation
++                        if (email.isBlank() || password.isBlank()) {
++                            errorMsg = "Veuillez remplir tous les champs"
++                            return@Button
++                        }
++                        if (password.length < 6) {
++                            errorMsg = "Le mot de passe doit avoir au moins 6 caractères"
++                            return@Button
++                        }
++                        if (!isLoginMode && name.isBlank()) {
++                            errorMsg = "Veuillez entrer un nom d'affichage"
++                            return@Button
++                        }
++
++                        isLoading = true
++                        errorMsg  = ""
++
++                        if (isLoginMode) {
++                            // CONNEXION
++                            auth.signInWithEmailAndPassword(email, password)
++                                .addOnSuccessListener { onLoginSuccess() }
++                                .addOnFailureListener { e ->
++                                    isLoading = false
++                                    errorMsg  = firebaseError(e.message)
++                                }
++                        } else {
++                            // INSCRIPTION
++                            auth.createUserWithEmailAndPassword(email, password)
++                                .addOnSuccessListener { result ->
++                                    val uid = result.user!!.uid
++                                    database.child("users").child(uid).setValue(
++                                        mapOf("name" to name, "email" to email)
++                                    )
++                                        .addOnSuccessListener { onLoginSuccess() }
++                                        .addOnFailureListener { e ->
++                                            isLoading = false
++                                            errorMsg  = "Compte créé mais erreur : ${e.message}"
++                                        }
++                                }
++                                .addOnFailureListener { e ->
++                                    isLoading = false
++                                    errorMsg  = firebaseError(e.message)
++                                }
++                        }
++                    },
++                    modifier = Modifier.fillMaxWidth().height(52.dp),
++                    shape = RoundedCornerShape(8.dp),
++                    colors = ButtonDefaults.buttonColors(containerColor = red)
++                ) {
++                    Text(
++                        text = if (isLoginMode) "Se connecter" else "Créer un compte",
++                        fontSize = 16.sp,
++                        fontWeight = FontWeight.Bold,
++                        color = white
++                    )
++                }
++            }
++        }
++    }
++}
++
++// Traduit les erreurs Firebase en français
++fun firebaseError(msg: String?): String = when {
++    msg == null                        -> "Erreur inconnue"
++    "no user record"     in msg        -> "Aucun compte avec cet email"
++    "password is invalid" in msg       -> "Mot de passe incorrect"
++    "email address is already" in msg  -> "Cet email est déjà utilisé"
++    "badly formatted"    in msg        -> "Format d'email invalide"
++    "network error"      in msg        -> "Pas de connexion internet"
++    else                               -> "Erreur : $msg"
++}
+\ No newline at end of file
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\r\n    xmlns:tools=\"http://schemas.android.com/tools\">\r\n\r\n    <application\r\n        android:allowBackup=\"true\"\r\n        android:dataExtractionRules=\"@xml/data_extraction_rules\"\r\n        android:fullBackupContent=\"@xml/backup_rules\"\r\n        android:icon=\"@mipmap/ic_launcher\"\r\n        android:label=\"@string/app_name\"\r\n        android:roundIcon=\"@mipmap/ic_launcher_round\"\r\n        android:supportsRtl=\"true\"\r\n        android:theme=\"@style/Theme.Netflix\">\r\n        <activity\r\n            android:name=\".MainActivity\"\r\n            android:exported=\"true\"\r\n            android:label=\"@string/app_name\"\r\n            android:theme=\"@style/Theme.Netflix\">\r\n            <intent-filter>\r\n                <action android:name=\"android.intent.action.MAIN\" />\r\n\r\n                <category android:name=\"android.intent.category.LAUNCHER\" />\r\n            </intent-filter>\r\n        </activity>\r\n        <activity android:name=\".LoginActivity\"\r\n            android:exported=\"true\">\r\n            <intent-filter>\r\n                <action android:name=\"android.intent.action.MAIN\" />\r\n                <category android:name=\"android.intent.category.LAUNCHER\" />\r\n            </intent-filter>\r\n        </activity>\r\n\r\n        <activity android:name=\".MainActivity\" />\r\n\r\n    </application>\r\n\r\n</manifest>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+--- a/app/src/main/AndroidManifest.xml	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/app/src/main/AndroidManifest.xml	(date 1773131121529)
+@@ -2,6 +2,9 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     xmlns:tools="http://schemas.android.com/tools">
+ 
++    <!-- Permission internet obligatoire pour Firebase -->
++    <uses-permission android:name="android.permission.INTERNET" />
++
+     <application
+         android:allowBackup="true"
+         android:dataExtractionRules="@xml/data_extraction_rules"
+@@ -10,27 +13,25 @@
+         android:label="@string/app_name"
+         android:roundIcon="@mipmap/ic_launcher_round"
+         android:supportsRtl="true"
+-        android:theme="@style/Theme.Netflix">
++        android:theme="@style/Theme.Netflix"
++        tools:targetApi="31">
++
++        <!-- LoginActivity : démarre EN PREMIER -->
+         <activity
+-            android:name=".MainActivity"
++            android:name=".LoginActivity"
+             android:exported="true"
+-            android:label="@string/app_name"
+             android:theme="@style/Theme.Netflix">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+-
+-                <category android:name="android.intent.category.LAUNCHER" />
+-            </intent-filter>
+-        </activity>
+-        <activity android:name=".LoginActivity"
+-            android:exported="true">
+-            <intent-filter>
+-                <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.LAUNCHER" />
+             </intent-filter>
+         </activity>
+ 
+-        <activity android:name=".MainActivity" />
++        <!-- MainActivity : s'ouvre après connexion réussie -->
++        <activity
++            android:name=".MainActivity"
++            android:exported="false"
++            android:theme="@style/Theme.Netflix" />
+ 
+     </application>
+ 
+Index: app/src/main/java/fr/isen/nicotom/netflix/ProfileScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package fr.isen.nicotom.netflix\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/fr/isen/nicotom/netflix/ProfileScreen.kt b/app/src/main/java/fr/isen/nicotom/netflix/ProfileScreen.kt
+--- a/app/src/main/java/fr/isen/nicotom/netflix/ProfileScreen.kt	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/app/src/main/java/fr/isen/nicotom/netflix/ProfileScreen.kt	(date 1773130200456)
+@@ -1,2 +1,270 @@
+ package fr.isen.nicotom.netflix
+ 
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import com.google.firebase.auth.FirebaseAuth
++import com.google.firebase.database.*
++
++// ===================================================
++// ProfileScreen
++// Affiche le profil de l'utilisateur connecté
++// + sa liste de films avec leur statut
++// + bouton de déconnexion
++// ===================================================
++
++@Composable
++fun ProfileScreen(onLogout: () -> Unit) {
++    val db     = FirebaseDatabase.getInstance().reference
++    val auth   = FirebaseAuth.getInstance()
++    val userId = auth.currentUser?.uid
++
++    // Couleurs
++    val black   = Color(0xFF141414)
++    val red     = Color(0xFFE50914)
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val surface = Color(0xFF2A2A2A)
++    val gold    = Color(0xFFF5C518)
++
++    // --- États ---
++    var userName     by remember { mutableStateOf("") }
++    var userEmail    by remember { mutableStateOf("") }
++    var ownedFilms   by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
++    // Pair(titre du film, statut)
++    var isLoading    by remember { mutableStateOf(true) }
++    var showLogoutDialog by remember { mutableStateOf(false) }
++
++    // --- Charger le profil et les films de l'utilisateur ---
++    LaunchedEffect(userId) {
++        userId ?: run { isLoading = false; return@LaunchedEffect }
++
++        // 1) Infos du profil
++        db.child("users").child(userId)
++            .addListenerForSingleValueEvent(object : ValueEventListener {
++                override fun onDataChange(snapshot: DataSnapshot) {
++                    userName  = snapshot.child("name").getValue(String::class.java) ?: ""
++                    userEmail = snapshot.child("email").getValue(String::class.java) ?: ""
++                }
++                override fun onCancelled(error: DatabaseError) {}
++            })
++
++        // 2) Statuts des films + titres depuis /films
++        db.child("users").child(userId).child("films")
++            .addValueEventListener(object : ValueEventListener {
++                override fun onDataChange(snapshot: DataSnapshot) {
++                    val userFilmStatuses = mutableMapOf<String, String>()
++                    for (child in snapshot.children) {
++                        userFilmStatuses[child.key!!] = child.value as String
++                    }
++
++                    if (userFilmStatuses.isEmpty()) {
++                        ownedFilms = emptyList()
++                        isLoading  = false
++                        return
++                    }
++
++                    // Récupérer les titres depuis /films
++                    db.child("films").addListenerForSingleValueEvent(object : ValueEventListener {
++                        override fun onDataChange(filmsSnapshot: DataSnapshot) {
++                            val result = mutableListOf<Pair<String, String>>()
++                            for ((filmId, status) in userFilmStatuses) {
++                                val titre = filmsSnapshot.child(filmId)
++                                    .child("titre").getValue(String::class.java)
++                                    ?: filmId // fallback sur l'id si pas trouvé
++                                result.add(titre to status)
++                            }
++                            // Trier par statut puis par titre
++                            ownedFilms = result.sortedWith(compareBy({ it.second }, { it.first }))
++                            isLoading  = false
++                        }
++                        override fun onCancelled(error: DatabaseError) { isLoading = false }
++                    })
++                }
++                override fun onCancelled(error: DatabaseError) { isLoading = false }
++            })
++    }
++
++    // --- Dialogue de confirmation de déconnexion ---
++    if (showLogoutDialog) {
++        AlertDialog(
++            onDismissRequest = { showLogoutDialog = false },
++            containerColor = surface,
++            title = { Text("Déconnexion", color = white, fontWeight = FontWeight.Bold) },
++            text  = { Text("Voulez-vous vraiment vous déconnecter ?", color = grey) },
++            confirmButton = {
++                TextButton(onClick = {
++                    auth.signOut()
++                    onLogout()
++                }) {
++                    Text("Oui", color = red, fontWeight = FontWeight.Bold)
++                }
++            },
++            dismissButton = {
++                TextButton(onClick = { showLogoutDialog = false }) {
++                    Text("Annuler", color = grey)
++                }
++            }
++        )
++    }
++
++    // --- UI ---
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(black)
++    ) {
++        if (isLoading) {
++            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                CircularProgressIndicator(color = red)
++            }
++        } else {
++            LazyColumn(
++                modifier = Modifier.fillMaxSize(),
++                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
++                verticalArrangement = Arrangement.spacedBy(16.dp)
++            ) {
++
++                // --- Titre page ---
++                item {
++                    Text(
++                        text = "Mon Profil",
++                        color = red,
++                        fontSize = 26.sp,
++                        fontWeight = FontWeight.ExtraBold
++                    )
++                }
++
++                // --- Carte profil ---
++                item {
++                    Surface(
++                        shape = RoundedCornerShape(12.dp),
++                        color = surface,
++                        modifier = Modifier.fillMaxWidth()
++                    ) {
++                        Column(modifier = Modifier.padding(16.dp)) {
++                            Text(
++                                text = "👤 $userName",
++                                color = white,
++                                fontSize = 20.sp,
++                                fontWeight = FontWeight.Bold
++                            )
++                            Spacer(modifier = Modifier.height(4.dp))
++                            Text(
++                                text = userEmail,
++                                color = grey,
++                                fontSize = 14.sp
++                            )
++                        }
++                    }
++                }
++
++                // --- Bouton déconnexion ---
++                item {
++                    Button(
++                        onClick = { showLogoutDialog = true },
++                        modifier = Modifier.fillMaxWidth().height(46.dp),
++                        shape = RoundedCornerShape(10.dp),
++                        colors = ButtonDefaults.buttonColors(containerColor = surface)
++                    ) {
++                        Text("🚪 Se déconnecter", color = red, fontWeight = FontWeight.Bold)
++                    }
++                }
++
++                // --- Titre section films ---
++                item {
++                    Text(
++                        text = "Ma collection",
++                        color = gold,
++                        fontSize = 18.sp,
++                        fontWeight = FontWeight.Bold,
++                        modifier = Modifier.padding(top = 8.dp)
++                    )
++                }
++
++                // --- Liste des films ---
++                if (ownedFilms.isEmpty()) {
++                    item {
++                        Text(
++                            text = "Vous n'avez encore aucun film dans votre collection.\nMarquez des films depuis leur page détail !",
++                            color = grey,
++                            fontSize = 14.sp
++                        )
++                    }
++                } else {
++                    items(ownedFilms) { (titre, status) ->
++                        ProfileFilmItem(
++                            titre   = titre,
++                            status  = status,
++                            surface = surface,
++                            white   = white,
++                            grey    = grey
++                        )
++                    }
++                }
++
++                item { Spacer(modifier = Modifier.height(32.dp)) }
++            }
++        }
++    }
++}
++
++// --- Carte d'un film dans le profil ---
++@Composable
++fun ProfileFilmItem(
++    titre: String,
++    status: String,
++    surface: Color,
++    white: Color,
++    grey: Color
++) {
++    val (emoji, label, badgeColor) = when (status) {
++        "watched"        -> Triple("✅", "Vu",            Color(0xFF2E7D32))
++        "want_to_watch"  -> Triple("👁", "Je veux voir",  Color(0xFF1565C0))
++        "own"            -> Triple("📀", "Je possède",    Color(0xFF6A1B9A))
++        "want_to_sell"   -> Triple("🔁", "Je veux céder", Color(0xFFE65100))
++        else             -> Triple("❓", status,          Color.Gray)
++    }
++
++    Surface(
++        shape = RoundedCornerShape(10.dp),
++        color = surface,
++        modifier = Modifier.fillMaxWidth()
++    ) {
++        Row(
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(12.dp),
++            verticalAlignment = Alignment.CenterVertically
++        ) {
++            Text(
++                text = titre,
++                color = white,
++                fontSize = 14.sp,
++                fontWeight = FontWeight.Medium,
++                modifier = Modifier.weight(1f)
++            )
++            Surface(
++                shape = RoundedCornerShape(8.dp),
++                color = badgeColor.copy(alpha = 0.25f)
++            ) {
++                Text(
++                    text = "$emoji $label",
++                    color = white,
++                    fontSize = 11.sp,
++                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
++                )
++            }
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/fr/isen/nicotom/netflix/UniverseScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package fr.isen.nicotom.netflix\r\n\r\nimport fr.isen.nicotom.netflix.Categorie\r\nimport fr.isen.nicotom.netflix.Franchise\r\nimport fr.isen.nicotom.netflix.SousSaga\r\nimport fr.isen.nicotom.netflix.Film\r\nimport android.util.Log\r\nimport androidx.compose.foundation.clickable\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.foundation.lazy.LazyColumn\r\nimport androidx.compose.foundation.lazy.items\r\nimport androidx.compose.material3.Card\r\nimport androidx.compose.material3.Scaffold\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.unit.dp\r\nimport com.google.firebase.Firebase\r\nimport com.google.firebase.database.*\r\nimport com.google.firebase.database.database\r\nimport com.google.gson.Gson\r\nimport com.google.gson.reflect.TypeToken\r\n\r\n@Composable\r\nfun UniverseScreen() {\r\n\r\n    val categories = remember { mutableStateListOf<Categorie>() }\r\n\r\n    LaunchedEffect(Unit) {\r\n        DataBaseHelper().getCategories {\r\n            categories.clear()\r\n            categories.addAll(it)\r\n        }\r\n    }\r\n\r\n    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->\r\n\r\n        LazyColumn(modifier = Modifier.padding(innerPadding)) {\r\n\r\n            items(categories) { categorie ->\r\n\r\n                CategoryItem(categorie)\r\n\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun CategoryItem(categorie: Categorie) {\r\n\r\n    var expanded by remember { mutableStateOf(false) }\r\n\r\n    Column {\r\n\r\n        Card(\r\n            modifier = Modifier\r\n                .padding(8.dp)\r\n                .clickable { expanded = !expanded }\r\n        ) {\r\n\r\n            Text(\r\n                text = categorie.categorie,\r\n                modifier = Modifier.padding(16.dp)\r\n            )\r\n        }\r\n\r\n        if (expanded) {\r\n            FranchiseList(categorie.franchises)\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun FranchiseList(franchises: List<Franchise>) {\r\n\r\n    Column(Modifier.padding(start = 16.dp)) {\r\n\r\n        franchises.forEach { franchise ->\r\n\r\n            var expanded by remember { mutableStateOf(false) }\r\n\r\n            Text(\r\n                franchise.nom,\r\n                modifier = Modifier\r\n                    .padding(8.dp)\r\n                    .clickable { expanded = !expanded }\r\n            )\r\n\r\n            if (expanded) {\r\n\r\n                franchise.sousSagas?.let {\r\n                    SagaList(it)\r\n                } ?: run {\r\n                    FilmList(franchise.tousLesFilms())\r\n                }\r\n\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun SagaList(sagas: List<SousSaga>) {\r\n\r\n    Column(Modifier.padding(start = 16.dp)) {\r\n\r\n        sagas.forEach { saga ->\r\n\r\n            var expanded by remember { mutableStateOf(false) }\r\n\r\n            Text(\r\n                saga.nom,\r\n                modifier = Modifier\r\n                    .padding(8.dp)\r\n                    .clickable { expanded = !expanded }\r\n            )\r\n\r\n            if (expanded) {\r\n\r\n                FilmList(saga.films)\r\n\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun FilmList(films: List<Film>) {\r\n\r\n    Column(Modifier.padding(start = 16.dp)) {\r\n\r\n        films.forEach { film ->\r\n\r\n            Text(\r\n                film.titre,\r\n                modifier = Modifier.padding(6.dp)\r\n            )\r\n\r\n        }\r\n    }\r\n}\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/fr/isen/nicotom/netflix/UniverseScreen.kt b/app/src/main/java/fr/isen/nicotom/netflix/UniverseScreen.kt
+--- a/app/src/main/java/fr/isen/nicotom/netflix/UniverseScreen.kt	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/app/src/main/java/fr/isen/nicotom/netflix/UniverseScreen.kt	(date 1773130742812)
+@@ -1,145 +1,291 @@
+ package fr.isen.nicotom.netflix
+ 
+-import fr.isen.nicotom.netflix.Categorie
+-import fr.isen.nicotom.netflix.Franchise
+-import fr.isen.nicotom.netflix.SousSaga
+-import fr.isen.nicotom.netflix.Film
+-import android.util.Log
++import androidx.compose.foundation.background
+ import androidx.compose.foundation.clickable
+-import androidx.compose.foundation.layout.Column
+-import androidx.compose.foundation.layout.fillMaxSize
+-import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.items
+-import androidx.compose.material3.Card
+-import androidx.compose.material3.Scaffold
+-import androidx.compose.material3.Text
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.*
+ import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
+ import androidx.compose.ui.unit.dp
+-import com.google.firebase.Firebase
+-import com.google.firebase.database.*
+-import com.google.firebase.database.database
+-import com.google.gson.Gson
+-import com.google.gson.reflect.TypeToken
++import androidx.compose.ui.unit.sp
++
++// ===================================================
++// UniverseScreen
++// Affiche les catégories → franchises → sous-sagas → films
++// Quand on clique sur un film → DetailFilmScreen
++// ===================================================
+ 
+ @Composable
+-fun UniverseScreen() {
++fun UniverseScreen(onFilmClick: (Film) -> Unit) {
+ 
++    val black = Color(0xFF141414)
++    val red   = Color(0xFFE50914)
++
++    // Chargement des catégories depuis Firebase
+     val categories = remember { mutableStateListOf<Categorie>() }
++    var isLoading by remember { mutableStateOf(true) }
+ 
+     LaunchedEffect(Unit) {
+-        DataBaseHelper().getCategories {
++        DataBaseHelper().getCategories { result ->
+             categories.clear()
+-            categories.addAll(it)
++            categories.addAll(result)
++            isLoading = false
+         }
+     }
+ 
+-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(black)
++    ) {
++        // Titre
++        Text(
++            text = "Univers Disney",
++            color = red,
++            fontSize = 24.sp,
++            fontWeight = FontWeight.ExtraBold,
++            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
++        )
+ 
+-        LazyColumn(modifier = Modifier.padding(innerPadding)) {
+-
+-            items(categories) { categorie ->
+-
+-                CategoryItem(categorie)
+-
++        if (isLoading) {
++            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                CircularProgressIndicator(color = red)
++            }
++        } else if (categories.isEmpty()) {
++            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                Text("Aucune donnée trouvée", color = Color(0xFF8A8A9A))
++            }
++        } else {
++            LazyColumn(
++                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
++                verticalArrangement = Arrangement.spacedBy(8.dp)
++            ) {
++                items(categories) { categorie ->
++                    CategoryItem(categorie = categorie, onFilmClick = onFilmClick)
++                }
+             }
+         }
+     }
+ }
+ 
++// ===================================================
++// CategoryItem — une catégorie (ex: "Grandes Sagas")
++// ===================================================
+ @Composable
+-fun CategoryItem(categorie: Categorie) {
++fun CategoryItem(categorie: Categorie, onFilmClick: (Film) -> Unit) {
++    val red     = Color(0xFFE50914)
++    val white   = Color.White
++    val surface = Color(0xFF2A2A2A)
+ 
+     var expanded by remember { mutableStateOf(false) }
+ 
+     Column {
+-
++        // En-tête de la catégorie (cliquable pour déplier)
+         Card(
+             modifier = Modifier
+-                .padding(8.dp)
+-                .clickable { expanded = !expanded }
++                .fillMaxWidth()
++                .clickable { expanded = !expanded },
++            shape = RoundedCornerShape(10.dp),
++            colors = CardDefaults.cardColors(containerColor = surface),
++            elevation = CardDefaults.cardElevation(4.dp)
+         ) {
+-
+-            Text(
+-                text = categorie.categorie,
+-                modifier = Modifier.padding(16.dp)
+-            )
++            Row(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .padding(16.dp),
++                verticalAlignment = Alignment.CenterVertically
++            ) {
++                Text(
++                    text = categorie.categorie,
++                    color = white,
++                    fontSize = 16.sp,
++                    fontWeight = FontWeight.Bold,
++                    modifier = Modifier.weight(1f)
++                )
++                Text(
++                    text = if (expanded) "▲" else "▼",
++                    color = red,
++                    fontSize = 14.sp
++                )
++            }
+         }
+ 
++        // Contenu déplié : liste des franchises
+         if (expanded) {
+-            FranchiseList(categorie.franchises)
++            Column(
++                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
++                verticalArrangement = Arrangement.spacedBy(4.dp)
++            ) {
++                categorie.franchises.forEach { franchise ->
++                    FranchiseItem(franchise = franchise, onFilmClick = onFilmClick)
++                }
++            }
+         }
+     }
+ }
+ 
++// ===================================================
++// FranchiseItem — une franchise (ex: "Star Wars")
++// ===================================================
+ @Composable
+-fun FranchiseList(franchises: List<Franchise>) {
+-
+-    Column(Modifier.padding(start = 16.dp)) {
+-
+-        franchises.forEach { franchise ->
++fun FranchiseItem(franchise: Franchise, onFilmClick: (Film) -> Unit) {
++    val gold    = Color(0xFFF5C518)
++    val white   = Color.White
++    val surface = Color(0xFF1E1E1E)
+ 
+-            var expanded by remember { mutableStateOf(false) }
++    var expanded by remember { mutableStateOf(false) }
+ 
+-            Text(
+-                franchise.nom,
+-                modifier = Modifier
+-                    .padding(8.dp)
+-                    .clickable { expanded = !expanded }
+-            )
++    Column {
++        // En-tête de la franchise
++        Surface(
++            shape = RoundedCornerShape(8.dp),
++            color = surface,
++            modifier = Modifier
++                .fillMaxWidth()
++                .clickable { expanded = !expanded }
++        ) {
++            Row(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .padding(horizontal = 14.dp, vertical = 10.dp),
++                verticalAlignment = Alignment.CenterVertically
++            ) {
++                Text(
++                    text = franchise.nom,
++                    color = gold,
++                    fontSize = 14.sp,
++                    fontWeight = FontWeight.SemiBold,
++                    modifier = Modifier.weight(1f)
++                )
++                Text(
++                    text = if (expanded) "▲" else "▼",
++                    color = gold,
++                    fontSize = 12.sp
++                )
++            }
++        }
+ 
+-            if (expanded) {
+-
+-                franchise.sousSagas?.let {
+-                    SagaList(it)
++        // Contenu déplié : sous-sagas ou films directs
++        if (expanded) {
++            Column(
++                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
++                verticalArrangement = Arrangement.spacedBy(4.dp)
++            ) {
++                franchise.sousSagas?.let { sagas ->
++                    // S'il y a des sous-sagas → on les affiche
++                    sagas.forEach { saga ->
++                        SagaItem(saga = saga, onFilmClick = onFilmClick)
++                    }
+                 } ?: run {
+-                    FilmList(franchise.tousLesFilms())
++                    // Sinon → on affiche directement les films
++                    FilmList(
++                        films = franchise.tousLesFilms(),
++                        onFilmClick = onFilmClick
++                    )
+                 }
+-
+             }
+         }
+     }
+ }
+ 
++// ===================================================
++// SagaItem — une sous-saga (ex: "Saga Skywalker")
++// ===================================================
+ @Composable
+-fun SagaList(sagas: List<SousSaga>) {
+-
+-    Column(Modifier.padding(start = 16.dp)) {
+-
+-        sagas.forEach { saga ->
++fun SagaItem(saga: SousSaga, onFilmClick: (Film) -> Unit) {
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val surface = Color(0xFF161616)
+ 
+-            var expanded by remember { mutableStateOf(false) }
++    var expanded by remember { mutableStateOf(false) }
+ 
+-            Text(
+-                saga.nom,
+-                modifier = Modifier
+-                    .padding(8.dp)
+-                    .clickable { expanded = !expanded }
+-            )
++    Column {
++        // En-tête de la saga
++        Surface(
++            shape = RoundedCornerShape(6.dp),
++            color = surface,
++            modifier = Modifier
++                .fillMaxWidth()
++                .clickable { expanded = !expanded }
++        ) {
++            Row(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .padding(horizontal = 12.dp, vertical = 8.dp),
++                verticalAlignment = Alignment.CenterVertically
++            ) {
++                Text(
++                    text = "${saga.nom}",
++                    color = grey,
++                    fontSize = 13.sp,
++                    modifier = Modifier.weight(1f)
++                )
++                Text(
++                    text = if (expanded) "▲" else "▼",
++                    color = grey,
++                    fontSize = 11.sp
++                )
++            }
++        }
+ 
+-            if (expanded) {
+-
+-                FilmList(saga.films)
+-
+-            }
++        // Films de la saga
++        if (expanded) {
++            FilmList(
++                films = saga.films,
++                onFilmClick = onFilmClick
++            )
+         }
+     }
+ }
+ 
++// ===================================================
++// FilmList — liste de films cliquables
++// ===================================================
+ @Composable
+-fun FilmList(films: List<Film>) {
++fun FilmList(films: List<Film>, onFilmClick: (Film) -> Unit) {
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val surface = Color(0xFF111111)
+ 
+-    Column(Modifier.padding(start = 16.dp)) {
+-
++    Column(
++        modifier = Modifier.padding(start = 8.dp, top = 4.dp),
++        verticalArrangement = Arrangement.spacedBy(4.dp)
++    ) {
+         films.forEach { film ->
+-
+-            Text(
+-                film.titre,
+-                modifier = Modifier.padding(6.dp)
+-            )
+-
+-        }
+-    }
+-}
+-
++            Surface(
++                shape = RoundedCornerShape(6.dp),
++                color = surface,
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .clickable { onFilmClick(film) }
++            ) {
++                Row(
++                    modifier = Modifier
++                        .fillMaxWidth()
++                        .padding(horizontal = 12.dp, vertical = 8.dp),
++                    verticalAlignment = Alignment.CenterVertically
++                ) {
++                    Text(
++                        text = film.titre,
++                        color = white,
++                        fontSize = 13.sp,
++                        modifier = Modifier.weight(1f)
++                    )
++                    film.annee?.let {
++                        Text(
++                            text = it.toString(),
++                            color = grey,
++                            fontSize = 12.sp
++                        )
++                    }
++                }
++            }
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/fr/isen/nicotom/netflix/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package fr.isen.nicotom.netflix\r\n\r\nimport android.os.Bundle\r\nimport androidx.activity.ComponentActivity\r\nimport androidx.activity.compose.setContent\r\nimport androidx.activity.enableEdgeToEdge\r\nimport fr.isen.nicotom.netflix.ui.theme.NetflixTheme\r\n\r\nclass MainActivity : ComponentActivity() {\r\n\r\n    override fun onCreate(savedInstanceState: Bundle?) {\r\n        super.onCreate(savedInstanceState)\r\n        enableEdgeToEdge()\r\n\r\n        setContent {\r\n            NetflixTheme {\r\n\r\n                UniverseScreen()\r\n\r\n            }\r\n        }\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/fr/isen/nicotom/netflix/MainActivity.kt b/app/src/main/java/fr/isen/nicotom/netflix/MainActivity.kt
+--- a/app/src/main/java/fr/isen/nicotom/netflix/MainActivity.kt	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/app/src/main/java/fr/isen/nicotom/netflix/MainActivity.kt	(date 1773131150583)
+@@ -1,22 +1,126 @@
+ package fr.isen.nicotom.netflix
+ 
++import android.content.Intent
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
+ import androidx.activity.enableEdgeToEdge
++import androidx.compose.foundation.layout.*
++import androidx.compose.material3.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
+ import fr.isen.nicotom.netflix.ui.theme.NetflixTheme
+ 
+ class MainActivity : ComponentActivity() {
+-
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         enableEdgeToEdge()
+ 
+         setContent {
+             NetflixTheme {
++                MainApp(
++                    onLogout = {
++                        // Déconnexion → retour au login
++                        startActivity(Intent(this, LoginActivity::class.java))
++                        finish()
++                    }
++                )
++            }
++        }
++    }
++}
++
++// ===================================================
++// Navigation entre les écrans
++// ===================================================
++
++sealed class Screen {
++    object Universe : Screen()                   // liste des univers/films
++    object Profile  : Screen()                   // profil utilisateur
++    data class Detail(val film: Film) : Screen() // détail d'un film
++}
++
++@Composable
++fun MainApp(onLogout: () -> Unit) {
++    val black = Color(0xFF141414)
++    val red   = Color(0xFFE50914)
++    val white = Color.White
++
++    // Écran actuellement affiché (Universe par défaut)
++    var currentScreen by remember { mutableStateOf<Screen>(Screen.Universe) }
+ 
+-                UniverseScreen()
++    Scaffold(
++        containerColor = black,
++        topBar = {
++            Surface(color = black.copy(alpha = 0.95f)) {
++                Row(
++                    modifier = Modifier
++                        .fillMaxWidth()
++                        .statusBarsPadding()
++                        .padding(horizontal = 16.dp, vertical = 12.dp),
++                    verticalAlignment = Alignment.CenterVertically
++                ) {
++                    Text(
++                        text = "NETFLIX+",
++                        color = red,
++                        fontSize = 22.sp,
++                        fontWeight = FontWeight.ExtraBold
++                    )
++                }
++            }
++        },
++        bottomBar = {
++            // Barre de navigation cachée sur l'écran détail
++            if (currentScreen !is Screen.Detail) {
++                NavigationBar(containerColor = Color(0xFF1A1A1A)) {
++                    NavigationBarItem(
++                        selected = currentScreen is Screen.Universe,
++                        onClick  = { currentScreen = Screen.Universe },
++                        icon     = { Text("🎬", fontSize = 20.sp) },
++                        label    = { Text("Films", color = white, fontSize = 11.sp) },
++                        colors   = NavigationBarItemDefaults.colors(
++                            indicatorColor = red.copy(alpha = 0.3f)
++                        )
++                    )
++                    NavigationBarItem(
++                        selected = currentScreen is Screen.Profile,
++                        onClick  = { currentScreen = Screen.Profile },
++                        icon     = { Text("👤", fontSize = 20.sp) },
++                        label    = { Text("Profil", color = white, fontSize = 11.sp) },
++                        colors   = NavigationBarItemDefaults.colors(
++                            indicatorColor = red.copy(alpha = 0.3f)
++                        )
++                    )
++                }
++            }
++        }
++    ) { innerPadding ->
++        Box(modifier = Modifier.padding(innerPadding)) {
++            when (val screen = currentScreen) {
+ 
++                is Screen.Universe -> {
++                    UniverseScreen(
++                        onFilmClick = { film ->
++                            currentScreen = Screen.Detail(film)
++                        }
++                    )
++                }
++
++                is Screen.Profile -> {
++                    ProfileScreen(onLogout = onLogout)
++                }
++
++                is Screen.Detail -> {
++                    DetailFilmScreen(
++                        film   = screen.film,
++                        onBack = { currentScreen = Screen.Universe }
++                    )
++                }
+             }
+         }
+     }
+Index: app/src/main/java/fr/isen/nicotom/netflix/DetailFilmScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package fr.isen.nicotom.netflix\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/fr/isen/nicotom/netflix/DetailFilmScreen.kt b/app/src/main/java/fr/isen/nicotom/netflix/DetailFilmScreen.kt
+--- a/app/src/main/java/fr/isen/nicotom/netflix/DetailFilmScreen.kt	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/app/src/main/java/fr/isen/nicotom/netflix/DetailFilmScreen.kt	(date 1773130180551)
+@@ -1,2 +1,273 @@
+ package fr.isen.nicotom.netflix
+ 
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import com.google.firebase.auth.FirebaseAuth
++import com.google.firebase.database.*
++
++
++@Composable
++fun DetailFilmScreen(film: Film, onBack: () -> Unit) {
++    val db     = FirebaseDatabase.getInstance().reference
++    val userId = FirebaseAuth.getInstance().currentUser?.uid
++
++    val black   = Color(0xFF141414)
++    val red     = Color(0xFFE50914)
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val surface = Color(0xFF2A2A2A)
++    val gold    = Color(0xFFF5C518)
++
++    // Statut actuel de l'utilisateur pour ce film
++    var currentStatus by remember { mutableStateOf<String?>(null) }
++
++    // Liste des users qui possèdent le film et veulent s'en débarrasser
++    var ownersWantingToSell by remember { mutableStateOf<List<String>>(emptyList()) }
++
++    var isLoading by remember { mutableStateOf(false) }
++    var message   by remember { mutableStateOf("") }
++
++    // --- Charger le statut actuel de l'utilisateur ---
++    LaunchedEffect(film.id) {
++        userId?.let { uid ->
++            db.child("users").child(uid).child("films").child(film.id)
++                .addValueEventListener(object : ValueEventListener {
++                    override fun onDataChange(snapshot: DataSnapshot) {
++                        currentStatus = snapshot.getValue(String::class.java)
++                    }
++                    override fun onCancelled(error: DatabaseError) {}
++                })
++        }
++
++        // Charger les utilisateurs qui possèdent ce film et veulent s'en débarrasser
++        db.child("users").addListenerForSingleValueEvent(object : ValueEventListener {
++            override fun onDataChange(snapshot: DataSnapshot) {
++                val sellers = mutableListOf<String>()
++                for (userSnapshot in snapshot.children) {
++                    val status = userSnapshot.child("films").child(film.id)
++                        .getValue(String::class.java)
++                    if (status == "want_to_sell") {
++                        val name = userSnapshot.child("name").getValue(String::class.java)
++                            ?: "Utilisateur inconnu"
++                        sellers.add(name)
++                    }
++                }
++                ownersWantingToSell = sellers
++            }
++            override fun onCancelled(error: DatabaseError) {}
++        })
++    }
++
++    // --- Fonction pour mettre à jour le statut ---
++    fun setStatus(newStatus: String) {
++        userId ?: run {
++            message = "Vous devez être connecté"
++            return
++        }
++        isLoading = true
++
++        // Si on reclique sur le même statut → on le supprime
++        if (currentStatus == newStatus) {
++            db.child("users").child(userId).child("films").child(film.id).removeValue()
++                .addOnSuccessListener {
++                    isLoading = false
++                    message   = "Statut supprimé"
++                }
++                .addOnFailureListener {
++                    isLoading = false
++                    message   = "Erreur lors de la suppression"
++                }
++        } else {
++            db.child("users").child(userId).child("films").child(film.id)
++                .setValue(newStatus)
++                .addOnSuccessListener {
++                    isLoading = false
++                    message   = "Statut mis à jour ✓"
++                }
++                .addOnFailureListener {
++                    isLoading = false
++                    message   = "Erreur lors de la mise à jour"
++                }
++        }
++    }
++
++    // --- UI ---
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(black)
++    ) {
++        // Barre du haut avec bouton retour
++        Row(
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(16.dp),
++            verticalAlignment = Alignment.CenterVertically
++        ) {
++            TextButton(onClick = onBack) {
++                Text("← Retour", color = red, fontSize = 14.sp)
++            }
++        }
++
++        LazyColumn(
++            modifier = Modifier.fillMaxSize(),
++            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
++            verticalArrangement = Arrangement.spacedBy(16.dp)
++        ) {
++
++            // --- Titre du film ---
++            item {
++                Text(
++                    text = film.titre,
++                    color = white,
++                    fontSize = 26.sp,
++                    fontWeight = FontWeight.ExtraBold
++                )
++            }
++
++            // --- Infos (année, saga) ---
++            item {
++                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
++                    film.annee?.let {
++                        InfoRow(label = "📅 Année", value = it.toString(), grey = grey, white = white)
++                    }
++                    film.genre?.let {
++                        InfoRow(label = "🎭 Genre", value = it, grey = grey, white = white)
++                    }
++                }
++            }
++
++            // --- Section : Mon statut ---
++            item {
++                Text(
++                    text = "Mon statut",
++                    color = gold,
++                    fontSize = 16.sp,
++                    fontWeight = FontWeight.Bold,
++                    modifier = Modifier.padding(top = 8.dp)
++                )
++            }
++
++            // --- Boutons de statut ---
++            item {
++                val statusOptions = listOf(
++                    Triple("watched",       "✅", "Vu"),
++                    Triple("want_to_watch", "👁", "Je veux voir"),
++                    Triple("own",           "📀", "Je possède"),
++                    Triple("want_to_sell",  "🔁", "Je veux céder")
++                )
++
++                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
++                    statusOptions.chunked(2).forEach { row ->
++                        Row(
++                            modifier = Modifier.fillMaxWidth(),
++                            horizontalArrangement = Arrangement.spacedBy(10.dp)
++                        ) {
++                            row.forEach { (statusKey, emoji, label) ->
++                                val isSelected = currentStatus == statusKey
++                                Button(
++                                    onClick = { setStatus(statusKey) },
++                                    modifier = Modifier
++                                        .weight(1f)
++                                        .height(48.dp),
++                                    shape = RoundedCornerShape(10.dp),
++                                    colors = ButtonDefaults.buttonColors(
++                                        containerColor = if (isSelected) red else surface
++                                    )
++                                ) {
++                                    Text(
++                                        text = "$emoji $label",
++                                        color = if (isSelected) white else grey,
++                                        fontSize = 12.sp,
++                                        fontWeight = if (isSelected) FontWeight.Bold
++                                        else FontWeight.Normal
++                                    )
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++
++            // Message de confirmation
++            if (message.isNotEmpty()) {
++                item {
++                    Text(
++                        text = message,
++                        color = if (message.contains("Erreur")) Color(0xFFFF6B6B)
++                        else Color(0xFF4CAF50),
++                        fontSize = 13.sp
++                    )
++                }
++            }
++
++            // Chargement
++            if (isLoading) {
++                item {
++                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
++                        CircularProgressIndicator(color = red, modifier = Modifier.size(24.dp))
++                    }
++                }
++            }
++
++            // --- Section : Personnes qui veulent céder ce film ---
++            item {
++                Text(
++                    text = "🔁 Personnes qui veulent céder ce film",
++                    color = gold,
++                    fontSize = 16.sp,
++                    fontWeight = FontWeight.Bold,
++                    modifier = Modifier.padding(top = 8.dp)
++                )
++            }
++
++            if (ownersWantingToSell.isEmpty()) {
++                item {
++                    Text(
++                        text = "Personne ne veut céder ce film pour l'instant",
++                        color = grey,
++                        fontSize = 13.sp
++                    )
++                }
++            } else {
++                items(ownersWantingToSell) { userName ->
++                    Surface(
++                        shape = RoundedCornerShape(8.dp),
++                        color = surface,
++                        modifier = Modifier.fillMaxWidth()
++                    ) {
++                        Text(
++                            text = "👤 $userName",
++                            color = white,
++                            fontSize = 14.sp,
++                            modifier = Modifier.padding(12.dp)
++                        )
++                    }
++                }
++            }
++
++            // Espace en bas
++            item { Spacer(modifier = Modifier.height(32.dp)) }
++        }
++    }
++}
++
++// Petite ligne info "Label : Valeur"
++@Composable
++fun InfoRow(label: String, value: String, grey: Color, white: Color) {
++    Row {
++        Text(text = "$label : ", color = grey, fontSize = 14.sp)
++        Text(text = value, color = white, fontSize = 14.sp, fontWeight = FontWeight.Medium)
++    }
++}
+\ No newline at end of file
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"ProjectRootManager\" version=\"2\" languageLevel=\"JDK_21\" default=\"true\" project-jdk-name=\"jbr-21\" project-jdk-type=\"JavaSDK\" />\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+--- a/.idea/misc.xml	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/.idea/misc.xml	(date 1773128713921)
+@@ -1,4 +1,5 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
++  <component name="ExternalStorageConfigurationManager" enabled="true" />
+   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="jbr-21" project-jdk-type="JavaSDK" />
+ </project>
+\ No newline at end of file
+Index: .idea/gradle.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/gradle.xml b/.idea/gradle.xml
+new file mode 100644
+--- /dev/null	(date 1773128713952)
++++ b/.idea/gradle.xml	(date 1773128713952)
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="GradleSettings">
++    <option name="linkedExternalProjectsSettings">
++      <GradleProjectSettings>
++        <option name="testRunner" value="CHOOSE_PER_TEST" />
++        <option name="externalProjectPath" value="$PROJECT_DIR$" />
++        <option name="modules">
++          <set>
++            <option value="$PROJECT_DIR$" />
++            <option value="$PROJECT_DIR$/app" />
++          </set>
++        </option>
++      </GradleProjectSettings>
++    </option>
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/AndroidProjectSystem.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/AndroidProjectSystem.xml b/.idea/AndroidProjectSystem.xml
+new file mode 100644
+--- /dev/null	(date 1773128713909)
++++ b/.idea/AndroidProjectSystem.xml	(date 1773128713909)
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="AndroidProjectSystem">
++    <option name="providerId" value="com.android.tools.idea.GradleProjectSystem" />
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/vcs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/vcs.xml b/.idea/vcs.xml
+new file mode 100644
+--- /dev/null	(date 1773128713973)
++++ b/.idea/vcs.xml	(date 1773128713973)
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="VcsDirectoryMappings">
++    <mapping directory="" vcs="Git" />
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/runConfigurations.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/runConfigurations.xml b/.idea/runConfigurations.xml
+new file mode 100644
+--- /dev/null	(date 1773128713963)
++++ b/.idea/runConfigurations.xml	(date 1773128713963)
+@@ -0,0 +1,17 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="RunConfigurationProducerService">
++    <option name="ignoredProducers">
++      <set>
++        <option value="com.intellij.execution.junit.AbstractAllInDirectoryConfigurationProducer" />
++        <option value="com.intellij.execution.junit.AllInPackageConfigurationProducer" />
++        <option value="com.intellij.execution.junit.PatternConfigurationProducer" />
++        <option value="com.intellij.execution.junit.TestInClassConfigurationProducer" />
++        <option value="com.intellij.execution.junit.UniqueIdConfigurationProducer" />
++        <option value="com.intellij.execution.junit.testDiscovery.JUnitTestDiscoveryConfigurationProducer" />
++        <option value="org.jetbrains.kotlin.idea.junit.KotlinJUnitRunConfigurationProducer" />
++        <option value="org.jetbrains.kotlin.idea.junit.KotlinPatternConfigurationProducer" />
++      </set>
++    </option>
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/fr/isen/nicotom/netflix/FilmsScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/fr/isen/nicotom/netflix/FilmsScreen.kt b/app/src/main/java/fr/isen/nicotom/netflix/FilmsScreen.kt
+new file mode 100644
+--- /dev/null	(date 1773130411938)
++++ b/app/src/main/java/fr/isen/nicotom/netflix/FilmsScreen.kt	(date 1773130411938)
+@@ -0,0 +1,236 @@
++package fr.isen.nicotom.netflix
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.LazyRow
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.*
++import androidx.compose.runtime.*
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.text.font.FontWeight
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import com.google.firebase.auth.FirebaseAuth
++import com.google.firebase.database.*
++
++
++@Composable
++fun FilmsScreen(onFilmClick: (Film) -> Unit) {
++    val db     = FirebaseDatabase.getInstance().reference
++    val userId = FirebaseAuth.getInstance().currentUser?.uid
++
++    var films          by remember { mutableStateOf<List<Film>>(emptyList()) }
++    var universes      by remember { mutableStateOf<List<Universe>>(emptyList()) }
++    var userStatuses   by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
++    var selectedUniverse by remember { mutableStateOf("all") }
++    var isLoading      by remember { mutableStateOf(true) }
++
++    val black   = Color(0xFF141414)
++    val red     = Color(0xFFE50914)
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val surface = Color(0xFF2A2A2A)
++
++
++    LaunchedEffect(Unit) {
++
++
++        userId?.let { uid ->
++            db.child("users").child(uid).child("films")
++                .addValueEventListener(object : ValueEventListener {
++                    override fun onDataChange(snapshot: DataSnapshot) {
++                        val statuses = mutableMapOf<String, String>()
++                        for (child in snapshot.children) {
++                            statuses[child.key!!] = child.value as String
++                        }
++                        userStatuses = statuses
++                    }
++                    override fun onCancelled(error: DatabaseError) {}
++                })
++        }
++
++        db.child("films").addListenerForSingleValueEvent(object : ValueEventListener {
++            override fun onDataChange(snapshot: DataSnapshot) {
++                val loadedFilms = mutableListOf<Film>()
++                for (child in snapshot.children) {
++                    val id       = child.key ?: continue
++                    val title    = child.child("title").getValue(String::class.java) ?: ""
++                    val year     = child.child("year").getValue(Int::class.java) ?: 0
++                    val universe = child.child("universe").getValue(String::class.java) ?: ""
++                    val saga     = child.child("saga").getValue(String::class.java) ?: ""
++                    val sagaOrder = child.child("sagaOrder").getValue(Int::class.java) ?: 0
++                    loadedFilms.add(Film(id, title, year, universe, saga, sagaOrder))
++                }
++                films = loadedFilms.sortedWith(
++                    compareBy({ it.universe }, { it.saga }, { it.sagaOrder }, { it.year })
++                )
++
++                db.child("universes").addListenerForSingleValueEvent(object : ValueEventListener {
++                    override fun onDataChange(snapshot: DataSnapshot) {
++                        val loadedUniverses = mutableListOf(
++                            Universe("all", "Tous", "🎬", 0) // option "Tous" en premier
++                        )
++                        for (child in snapshot.children) {
++                            val id    = child.key ?: continue
++                            val name  = child.child("name").getValue(String::class.java) ?: ""
++                            val emoji = child.child("emoji").getValue(String::class.java) ?: ""
++                            val order = child.child("order").getValue(Int::class.java) ?: 99
++                            loadedUniverses.add(Universe(id, name, emoji, order))
++                        }
++                        universes = loadedUniverses.sortedBy { it.order }
++                        isLoading = false
++                    }
++                    override fun onCancelled(error: DatabaseError) { isLoading = false }
++                })
++            }
++            override fun onCancelled(error: DatabaseError) { isLoading = false }
++        })
++    }
++
++    val filteredFilms = remember(films, selectedUniverse, userStatuses) {
++        val list = if (selectedUniverse == "all") films
++        else films.filter { it.universe == selectedUniverse }
++        // Ajouter le statut utilisateur à chaque film
++        list.map { it.copy(userStatus = userStatuses[it.id]) }
++    }
++
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(black)
++    ) {
++        Text(
++            text = "🎬 Films Disney",
++            color = red,
++            fontSize = 24.sp,
++            fontWeight = FontWeight.ExtraBold,
++            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
++        )
++
++        if (universes.isNotEmpty()) {
++            LazyRow(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .padding(bottom = 12.dp),
++                contentPadding = PaddingValues(horizontal = 16.dp),
++                horizontalArrangement = Arrangement.spacedBy(8.dp)
++            ) {
++                items(universes) { universe ->
++                    val isSelected = universe.id == selectedUniverse
++                    Surface(
++                        shape = RoundedCornerShape(20.dp),
++                        color = if (isSelected) red else surface,
++                        modifier = Modifier.clickable { selectedUniverse = universe.id }
++                    ) {
++                        Text(
++                            text = "${universe.emoji} ${universe.name}",
++                            color = if (isSelected) white else grey,
++                            fontSize = 13.sp,
++                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
++                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
++                        )
++                    }
++                }
++            }
++        }
++
++        when {
++            isLoading -> {
++                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                    CircularProgressIndicator(color = red)
++                }
++            }
++            filteredFilms.isEmpty() -> {
++                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                    Text("Aucun film dans cet univers", color = grey)
++                }
++            }
++            else -> {
++                LazyColumn(
++                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
++                    verticalArrangement = Arrangement.spacedBy(8.dp)
++                ) {
++                    items(filteredFilms) { film ->
++                        FilmCard(film = film, onClick = { onFilmClick(film) })
++                    }
++                }
++            }
++        }
++    }
++}
++
++@Composable
++fun FilmCard(film: Film, onClick: () -> Unit) {
++    val surface = Color(0xFF2A2A2A)
++    val white   = Color.White
++    val grey    = Color(0xFF8A8A9A)
++    val gold    = Color(0xFFF5C518)
++    val red     = Color(0xFFE50914)
++
++    Card(
++        modifier = Modifier
++            .fillMaxWidth()
++            .clickable { onClick() },
++        shape = RoundedCornerShape(10.dp),
++        colors = CardDefaults.cardColors(containerColor = surface),
++        elevation = CardDefaults.cardElevation(4.dp)
++    ) {
++        Row(
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(14.dp),
++            verticalAlignment = Alignment.CenterVertically
++        ) {
++            // Infos du film
++            Column(modifier = Modifier.weight(1f)) {
++                Text(
++                    text = film.title,
++                    color = white,
++                    fontSize = 15.sp,
++                    fontWeight = FontWeight.Bold
++                )
++                Text(
++                    text = film.year.toString(),
++                    color = grey,
++                    fontSize = 13.sp,
++                    modifier = Modifier.padding(top = 2.dp)
++                )
++                if (film.saga.isNotEmpty()) {
++                    Text(
++                        text = "Saga : ${film.saga}",
++                        color = gold,
++                        fontSize = 12.sp,
++                        modifier = Modifier.padding(top = 2.dp)
++                    )
++                }
++            }
++
++            // Badge statut utilisateur
++            film.userStatus?.let { status ->
++                val (emoji, label) = when (status) {
++                    "watched"        -> "✅" to "Vu"
++                    "want_to_watch"  -> "👁" to "Veux voir"
++                    "own"            -> "📀" to "Possédé"
++                    "want_to_sell"   -> "🔁" to "À céder"
++                    else             -> return@let
++                }
++                Surface(
++                    shape = RoundedCornerShape(12.dp),
++                    color = red.copy(alpha = 0.2f)
++                ) {
++                    Text(
++                        text = "$emoji $label",
++                        color = white,
++                        fontSize = 11.sp,
++                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
++                    )
++                }
++            }
++        }
++    }
++}
+\ No newline at end of file
+Index: .idea/deploymentTargetSelector.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/deploymentTargetSelector.xml b/.idea/deploymentTargetSelector.xml
+new file mode 100644
+--- /dev/null	(date 1773128997183)
++++ b/.idea/deploymentTargetSelector.xml	(date 1773128997183)
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="deploymentTargetSelector">
++    <selectionStates>
++      <SelectionState runConfigName="app">
++        <option name="selectionMode" value="DROPDOWN" />
++      </SelectionState>
++    </selectionStates>
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/appInsightsSettings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AppInsightsSettings\">\r\n    <option name=\"tabSettings\">\r\n      <map>\r\n        <entry key=\"Firebase Crashlytics\">\r\n          <value>\r\n            <InsightsFilterSettings>\r\n              <option name=\"connection\">\r\n                <ConnectionSetting>\r\n                  <option name=\"appId\" value=\"PLACEHOLDER\" />\r\n                  <option name=\"mobileSdkAppId\" value=\"\" />\r\n                  <option name=\"projectId\" value=\"\" />\r\n                  <option name=\"projectNumber\" value=\"\" />\r\n                </ConnectionSetting>\r\n              </option>\r\n              <option name=\"signal\" value=\"SIGNAL_UNSPECIFIED\" />\r\n              <option name=\"timeIntervalDays\" value=\"THIRTY_DAYS\" />\r\n              <option name=\"visibilityType\" value=\"ALL\" />\r\n            </InsightsFilterSettings>\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/appInsightsSettings.xml b/.idea/appInsightsSettings.xml
+--- a/.idea/appInsightsSettings.xml	(revision 0553ef974fbe24aa24e4cb9d413733924cc1952b)
++++ b/.idea/appInsightsSettings.xml	(date 1773128713942)
+@@ -8,10 +8,10 @@
+             <InsightsFilterSettings>
+               <option name="connection">
+                 <ConnectionSetting>
+-                  <option name="appId" value="PLACEHOLDER" />
+-                  <option name="mobileSdkAppId" value="" />
+-                  <option name="projectId" value="" />
+-                  <option name="projectNumber" value="" />
++                  <option name="appId" value="fr.isen.nicotom.netflix" />
++                  <option name="mobileSdkAppId" value="1:440087532520:android:1c39ba616d2492a74c0a5d" />
++                  <option name="projectId" value="netflix-54ff1" />
++                  <option name="projectNumber" value="440087532520" />
+                 </ConnectionSetting>
+               </option>
+               <option name="signal" value="SIGNAL_UNSPECIFIED" />
