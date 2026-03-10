@@ -1,12 +1,12 @@
 package fr.isen.nicotom.netflix
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
             NetflixTheme {
 
                 var selectedFilm by remember { mutableStateOf<Film?>(null) }
+                var currentTab by remember { mutableStateOf("films") }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -35,6 +36,32 @@ class MainActivity : ComponentActivity() {
                             isDetailView = selectedFilm != null,
                             onBackClick = { selectedFilm = null }
                         )
+                    },
+
+                    bottomBar = {
+
+                        if (selectedFilm == null) {
+
+                            NavigationBar(
+                                containerColor = Color(0xFF1A1A1A)
+                            ) {
+
+                                NavigationBarItem(
+                                    selected = currentTab == "films",
+                                    onClick = { currentTab = "films" },
+                                    icon = { Text("🎬") },
+                                    label = { Text("Films") }
+                                )
+
+                                NavigationBarItem(
+                                    selected = currentTab == "profile",
+                                    onClick = { currentTab = "profile" },
+                                    icon = { Text("👤") },
+                                    label = { Text("Profil") }
+                                )
+
+                            }
+                        }
                     },
 
                     containerColor = Color.Black
@@ -48,20 +75,44 @@ class MainActivity : ComponentActivity() {
                         color = Color.Black
                     ) {
 
-                        if (selectedFilm == null) {
-
-                            UniverseScreen(
-                                onFilmClick = { film ->
-                                    selectedFilm = film
-                                }
-                            )
-
-                        } else {
+                        if (selectedFilm != null) {
 
                             DetailFilmScreen(
                                 titre = selectedFilm?.titre,
                                 annee = selectedFilm?.annee?.toString()
                             )
+
+                        } else {
+
+                            when (currentTab) {
+
+                                "films" -> {
+
+                                    UniverseScreen(
+                                        onFilmClick = { film ->
+                                            selectedFilm = film
+                                        }
+                                    )
+
+                                }
+
+                                "profile" -> {
+
+                                    ProfileScreen(
+                                        onLogout = {
+                                            startActivity(
+                                                Intent(
+                                                    this@MainActivity,
+                                                    LoginActivity::class.java
+                                                )
+                                            )
+                                            finish()
+                                        }
+                                    )
+
+                                }
+
+                            }
 
                         }
 
