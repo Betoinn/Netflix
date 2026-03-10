@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="fr.isen.nicotom.netflix" />
+                  <option name="mobileSdkAppId" value="1:440087532520:android:1c39ba616d2492a74c0a5d" />
+                  <option name="projectId" value="netflix-54ff1" />
+                  <option name="projectNumber" value="440087532520" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
