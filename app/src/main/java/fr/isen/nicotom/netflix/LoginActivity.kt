@@ -1,3 +1,4 @@
+/*
 package fr.isen.nicotom.netflix
 
 import android.content.Intent
@@ -160,3 +161,5 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 }
+
+ */

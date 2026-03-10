@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "440087532520",
+    "firebase_url": "https://netflix-54ff1-default-rtdb.firebaseio.com",
+    "project_id": "netflix-54ff1",
+    "storage_bucket": "netflix-54ff1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:440087532520:android:1c39ba616d2492a74c0a5d",
+        "android_client_info": {
+          "package_name": "fr.isen.nicotom.netflix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9-jN4K7jaT83OZLXnddTovcZvK8D6nT8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
