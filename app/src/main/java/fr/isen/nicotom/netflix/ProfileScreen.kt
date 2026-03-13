@@ -119,7 +119,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
             ) {
-                Text("🚪 Se déconnecter", fontWeight = FontWeight.Bold)
+                Text("Se déconnecter", fontWeight = FontWeight.Bold)
             }
         }
 

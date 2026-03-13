@@ -196,7 +196,7 @@ fun DetailFilmScreen(
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
-            text = "📀 Utilisateurs qui possèdent ce film",
+            text = "📀 Users who own this movie",
             color = Color.LightGray,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
@@ -214,7 +214,7 @@ fun DetailFilmScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "🔁 Utilisateurs qui veulent céder ce film",
+            text = "🔁 Users who whant to get rid of it",
             color = Color.LightGray,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
