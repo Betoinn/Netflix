@@ -75,7 +75,6 @@ class LoginActivity : ComponentActivity() {
 
                 if (dbPassword == pass) {
 
-                    // utilisateur connecté
                     UserSession.currentUser = username
 
                     Toast.makeText(this, "Connexion réussie", Toast.LENGTH_SHORT).show()

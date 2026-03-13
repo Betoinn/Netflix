@@ -19,13 +19,11 @@ fun ProfileScreen(onLogout: () -> Unit) {
     val user     = UserSession.currentUser ?: return
     val database = FirebaseDatabase.getInstance()
 
-    // --- Les 4 listes de films ---
     var watched      by remember { mutableStateOf(listOf<String>()) }
     var wantToWatch  by remember { mutableStateOf(listOf<String>()) }
     var owned        by remember { mutableStateOf(listOf<String>()) }
     var wantToGetRid by remember { mutableStateOf(listOf<String>()) }
 
-    // --- Charger les films depuis Firebase ---
     LaunchedEffect(Unit) {
         database.getReference("users")
             .child(user)
@@ -54,7 +52,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
             }
     }
 
-    // --- UI ---
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -62,7 +59,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
             .padding(24.dp)
     ) {
 
-        // Titre
         item {
             Text(
                 text = "Profil : $user",
@@ -73,7 +69,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // --- Section Watched ---
         item {
             SectionTitle(emoji = "✅", title = "Watched", count = watched.size)
         }
@@ -85,7 +80,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
 
-        // --- Section Want to watch ---
         item {
             SectionTitle(emoji = "👁", title = "Want to watch", count = wantToWatch.size)
         }
@@ -97,7 +91,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
 
-        // --- Section Own on DVD / BluRay ---
         item {
             SectionTitle(emoji = "📀", title = "Own on DVD / BluRay", count = owned.size)
         }
@@ -109,7 +102,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
 
-        // --- Section Want to get rid of ---
         item {
             SectionTitle(emoji = "🔁", title = "Want to get rid of", count = wantToGetRid.size)
         }
@@ -121,7 +113,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
         item { Spacer(modifier = Modifier.height(40.dp)) }
 
-        // --- Bouton déconnexion ---
         item {
             Button(
                 onClick = { onLogout() },
@@ -136,7 +127,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
     }
 }
 
-// Titre d'une section avec compteur
 @Composable
 fun SectionTitle(emoji: String, title: String, count: Int) {
     Row(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -155,7 +145,6 @@ fun SectionTitle(emoji: String, title: String, count: Int) {
     }
 }
 
-// Une ligne de film
 @Composable
 fun FilmRow(title: String) {
     Text(
@@ -166,7 +155,6 @@ fun FilmRow(title: String) {
     )
 }
 
-// Message si la liste est vide
 @Composable
 fun EmptyMessage() {
     Text(

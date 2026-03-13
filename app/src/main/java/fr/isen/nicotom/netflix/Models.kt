@@ -2,21 +2,12 @@ package fr.isen.nicotom.netflix
 
 import com.google.gson.annotations.SerializedName
 
-// ─────────────────────────────────────────────
-// Racine Firebase
-// ─────────────────────────────────────────────
-
 data class DisneyDatabase(
 
     @SerializedName("categories")
     val categories: List<Categorie> = emptyList()
 
 )
-
-// ─────────────────────────────────────────────
-// Catégorie
-// ex : "Grandes Sagas"
-// ─────────────────────────────────────────────
 
 data class Categorie(
 
@@ -27,11 +18,6 @@ data class Categorie(
     val franchises: List<Franchise> = emptyList()
 
 )
-
-// ─────────────────────────────────────────────
-// Franchise
-// ex : "Star Wars"
-// ─────────────────────────────────────────────
 
 data class Franchise(
 
@@ -56,10 +42,6 @@ data class Franchise(
 
 }
 
-// ─────────────────────────────────────────────
-// Sous Saga
-// ex : "Saga Skywalker"
-// ─────────────────────────────────────────────
 
 data class SousSaga(
 
@@ -71,9 +53,6 @@ data class SousSaga(
 
 )
 
-// ─────────────────────────────────────────────
-// Film
-// ─────────────────────────────────────────────
 
 data class Film(
 

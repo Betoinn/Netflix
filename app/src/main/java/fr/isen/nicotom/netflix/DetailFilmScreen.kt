@@ -28,24 +28,20 @@ fun DetailFilmScreen(
     val userId   = UserSession.currentUser ?: return
     val scope    = rememberCoroutineScope()
 
-    // --- États cases à cocher ---
     var watched      by remember { mutableStateOf(false) }
     var wantToWatch  by remember { mutableStateOf(false) }
     var owned        by remember { mutableStateOf(false) }
     var wantToGetRid by remember { mutableStateOf(false) }
 
-    // --- Données TMDB ---
     var posterUrl   by remember { mutableStateOf<String?>(null) }
     var description by remember { mutableStateOf<String?>(null) }
     var isLoadingTmdb by remember { mutableStateOf(true) }
 
-    // --- Autres utilisateurs ---
     var usersWhoOwn        by remember { mutableStateOf(listOf<String>()) }
     var usersWhoWantToSell by remember { mutableStateOf(listOf<String>()) }
 
     LaunchedEffect(titre) {
 
-        // 1) Statuts Firebase de l'utilisateur connecté
         database.getReference("users")
             .child(userId)
             .child("films")
@@ -58,7 +54,6 @@ fun DetailFilmScreen(
                 wantToGetRid = snapshot.child("wantToGetRid").value == true
             }
 
-        // 2) Autres utilisateurs (owned + wantToGetRid)
         database.getReference("users").get().addOnSuccessListener { snapshot ->
             val ownList  = mutableListOf<String>()
             val sellList = mutableListOf<String>()
@@ -73,7 +68,6 @@ fun DetailFilmScreen(
             usersWhoWantToSell = sellList
         }
 
-        // 3) Appel TMDB pour l'affiche et la description
         scope.launch {
             try {
                 val response = TmdbApi.service.searchMovie(
@@ -92,7 +86,6 @@ fun DetailFilmScreen(
         }
     }
 
-    // Sauvegarder un statut dans Firebase
     fun updateFirebase(field: String, value: Boolean) {
         database.getReference("users")
             .child(userId)
@@ -102,7 +95,6 @@ fun DetailFilmScreen(
             .setValue(value)
     }
 
-    // --- UI ---
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -111,7 +103,6 @@ fun DetailFilmScreen(
             .padding(24.dp)
     ) {
 
-        // --- Affiche du film ---
         if (isLoadingTmdb) {
             Box(
                 modifier = Modifier
@@ -134,7 +125,6 @@ fun DetailFilmScreen(
                 contentScale = ContentScale.Crop
             )
         } else {
-            // Placeholder si pas d'affiche
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -149,7 +139,6 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Titre ---
         Text(
             text = titre ?: "Titre inconnu",
             color = Color.White,
@@ -159,7 +148,6 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // --- Année ---
         Text(
             text = "📅 Date de sortie : ${annee ?: "N/A"}",
             color = Color.Red,
@@ -168,7 +156,6 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Description ---
         Text(
             text = "Synopsis",
             color = Color.LightGray,
@@ -185,7 +172,6 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // --- Mon statut ---
         Text(
             text = "Mon statut",
             color = Color.LightGray,
@@ -209,7 +195,6 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // --- Utilisateurs qui possèdent ce film ---
         Text(
             text = "📀 Utilisateurs qui possèdent ce film",
             color = Color.LightGray,
@@ -228,7 +213,6 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- Utilisateurs qui veulent céder ce film ---
         Text(
             text = "🔁 Utilisateurs qui veulent céder ce film",
             color = Color.LightGray,
@@ -249,7 +233,6 @@ fun DetailFilmScreen(
     }
 }
 
-// Case à cocher réutilisable
 @Composable
 fun CheckboxRow(
     text: String,

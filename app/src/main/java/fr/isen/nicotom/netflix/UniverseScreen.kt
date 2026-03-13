@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun UniverseScreen(onFilmClick: (Film) -> Unit) { // Ajout du paramètre ici
+fun UniverseScreen(onFilmClick: (Film) -> Unit) {
     val categories = remember { mutableStateListOf<Categorie>() }
 
     LaunchedEffect(Unit) {
@@ -29,7 +29,7 @@ fun UniverseScreen(onFilmClick: (Film) -> Unit) { // Ajout du paramètre ici
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             items(categories) { categorie ->
-                CategoryItem(categorie, onFilmClick) // On passe le clic
+                CategoryItem(categorie, onFilmClick)
             }
         }
     }
@@ -54,7 +54,7 @@ fun CategoryItem(categorie: Categorie, onFilmClick: (Film) -> Unit) {
             }
         }
         if (expanded) {
-            FranchiseList(categorie.franchises, onFilmClick) // On passe le clic
+            FranchiseList(categorie.franchises, onFilmClick)
         }
     }
 }
@@ -71,9 +71,9 @@ fun FranchiseList(franchises: List<Franchise>, onFilmClick: (Film) -> Unit) {
             )
             if (expanded) {
                 franchise.sousSagas?.let {
-                    SagaList(it, onFilmClick) // On passe le clic
+                    SagaList(it, onFilmClick)
                 } ?: run {
-                    FilmList(franchise.tousLesFilms(), onFilmClick) // Correction ici
+                    FilmList(franchise.tousLesFilms(), onFilmClick)
                 }
             }
         }
@@ -91,7 +91,7 @@ fun SagaList(sagas: List<SousSaga>, onFilmClick: (Film) -> Unit) {
                 modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 6.dp)
             )
             if (expanded) {
-                FilmList(saga.films, onFilmClick) // Correction ici
+                FilmList(saga.films, onFilmClick)
             }
         }
     }
@@ -99,7 +99,6 @@ fun SagaList(sagas: List<SousSaga>, onFilmClick: (Film) -> Unit) {
 
 @Composable
 fun FilmList(films: List<Film>, onFilmClick: (Film) -> Unit) {
-    // Correction du padding : on utilise Modifier.padding(...) sans "paddingValues ="
     Column(modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)) {
         films.forEach { film ->
             Text(
@@ -107,7 +106,7 @@ fun FilmList(films: List<Film>, onFilmClick: (Film) -> Unit) {
                 color = Color(0xFFE50914),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onFilmClick(film) } // Action de clic finale
+                    .clickable { onFilmClick(film) }
                     .padding(vertical = 8.dp)
             )
         }
