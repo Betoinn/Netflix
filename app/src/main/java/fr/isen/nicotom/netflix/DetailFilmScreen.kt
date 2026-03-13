@@ -11,12 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.database.FirebaseDatabase
 
-// ===================================================
-// DetailFilmScreen
-// Affiche les infos d'un film + cases à cocher statut
-// Compatible avec ton MainActivity et UserSession
-// ===================================================
-
 @Composable
 fun DetailFilmScreen(
     titre: String?,
@@ -31,7 +25,11 @@ fun DetailFilmScreen(
     var owned        by remember { mutableStateOf(false) }
     var wantToGetRid by remember { mutableStateOf(false) }
 
-    // --- Charger les statuts depuis Firebase ---
+    // --- Listes des autres utilisateurs ---
+    var usersWhoOwn         by remember { mutableStateOf(listOf<String>()) }
+    var usersWhoWantToSell  by remember { mutableStateOf(listOf<String>()) }
+
+    // --- Charger les statuts de l'utilisateur connecté ---
     LaunchedEffect(titre) {
         val ref = database.getReference("users")
             .child(userId)
@@ -43,6 +41,31 @@ fun DetailFilmScreen(
             wantToWatch  = snapshot.child("wantToWatch").value == true
             owned        = snapshot.child("owned").value == true
             wantToGetRid = snapshot.child("wantToGetRid").value == true
+        }
+
+        // --- Charger les autres utilisateurs ---
+        database.getReference("users").get().addOnSuccessListener { snapshot ->
+            val ownList     = mutableListOf<String>()
+            val sellList    = mutableListOf<String>()
+
+            for (userSnapshot in snapshot.children) {
+                val username = userSnapshot.key ?: continue
+
+                // On ne s'affiche pas soi-même
+                if (username == userId) continue
+
+                val filmSnapshot = userSnapshot.child("films").child(titre ?: "")
+
+                if (filmSnapshot.child("owned").value == true) {
+                    ownList.add(username)
+                }
+                if (filmSnapshot.child("wantToGetRid").value == true) {
+                    sellList.add(username)
+                }
+            }
+
+            usersWhoOwn        = ownList
+            usersWhoWantToSell = sellList
         }
     }
 
@@ -83,29 +106,26 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Cases à cocher ---
+        // --- Mon statut ---
         Text(
             text = "Mon statut",
             color = Color.LightGray,
             fontSize = 16.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         CheckboxRow("✅ Watched", watched) {
             watched = it
             updateFirebase("watched", it)
         }
-
         CheckboxRow("👁 Want to watch", wantToWatch) {
             wantToWatch = it
             updateFirebase("wantToWatch", it)
         }
-
         CheckboxRow("📀 Own on DVD / BluRay", owned) {
             owned = it
             updateFirebase("owned", it)
         }
-
         CheckboxRow("🔁 Want to get rid of", wantToGetRid) {
             wantToGetRid = it
             updateFirebase("wantToGetRid", it)
@@ -113,14 +133,43 @@ fun DetailFilmScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Utilisateurs qui veulent céder ce film ---
-        WantToSellSection(titre = titre)
+        // --- Utilisateurs qui possèdent ce film ---
+        Text(
+            text = "📀 Utilisateurs qui possèdent ce film",
+            color = Color.LightGray,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        if (usersWhoOwn.isEmpty()) {
+            Text("Personne pour l'instant", color = Color.DarkGray, fontSize = 14.sp)
+        } else {
+            usersWhoOwn.forEach { name ->
+                Text("👤 $name", color = Color.White, fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 2.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- Utilisateurs qui veulent s'en débarrasser ---
+        Text(
+            text = "🔁 Utilisateurs qui veulent céder ce film",
+            color = Color.LightGray,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        if (usersWhoWantToSell.isEmpty()) {
+            Text("Personne pour l'instant", color = Color.DarkGray, fontSize = 14.sp)
+        } else {
+            usersWhoWantToSell.forEach { name ->
+                Text("👤 $name", color = Color.White, fontSize = 14.sp,
+                    modifier = Modifier.padding(vertical = 2.dp))
+            }
+        }
     }
 }
 
-// ===================================================
 // Case à cocher réutilisable
-// ===================================================
 @Composable
 fun CheckboxRow(
     text: String,
@@ -139,61 +188,6 @@ fun CheckboxRow(
                 uncheckedColor = Color.Gray
             )
         )
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 16.sp
-        )
-    }
-}
-
-// ===================================================
-// Section : qui veut céder ce film ?
-// ===================================================
-@Composable
-fun WantToSellSection(titre: String?) {
-    val database = FirebaseDatabase.getInstance()
-    var sellers by remember { mutableStateOf<List<String>>(emptyList()) }
-
-    LaunchedEffect(titre) {
-        database.getReference("users").get().addOnSuccessListener { snapshot ->
-            val result = mutableListOf<String>()
-            for (userSnapshot in snapshot.children) {
-                val wantToGetRid = userSnapshot
-                    .child("films")
-                    .child(titre ?: "")
-                    .child("wantToGetRid")
-                    .value == true
-
-                if (wantToGetRid) {
-                    result.add(userSnapshot.key ?: "Inconnu")
-                }
-            }
-            sellers = result
-        }
-    }
-
-    Text(
-        text = "🔁 Personnes qui veulent céder ce film",
-        color = Color.LightGray,
-        fontSize = 16.sp,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
-
-    if (sellers.isEmpty()) {
-        Text(
-            text = "Personne pour l'instant",
-            color = Color.Gray,
-            fontSize = 14.sp
-        )
-    } else {
-        sellers.forEach { name ->
-            Text(
-                text = "👤 $name",
-                color = Color.White,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
-        }
+        Text(text = text, color = Color.White, fontSize = 16.sp)
     }
 }
