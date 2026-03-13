@@ -60,4 +60,11 @@ dependencies {
     // GSON
     implementation("com.google.code.gson:gson:2.10.1")
 
+    // Retrofit pour appels API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+// Coil pour afficher les images
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
 }
